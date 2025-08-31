@@ -6,20 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:ftp": "next build && next export && xcopy /E /I /Y \".next\\out\" \"C:\\Users\\Teremy Alex\\Desktop\\FTP\\berfigyelo\""
   },
   "dependencies": {
+    "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.4.6"
+    "react-google-recaptcha": "^3.1.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-google-recaptcha": "^2.1.9",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
-    "@eslint/eslintrc": "^3"
+    "typescript": "^5"
   }
 }
