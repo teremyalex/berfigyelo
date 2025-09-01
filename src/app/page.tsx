@@ -4,15 +4,6 @@ import Head from "next/head";
 import {useRef, useState, useEffect} from "react";
 import ReCAPTCHA from "react-google-recaptcha"
 
-
-/**
- * The Home component provides an interactive interface for users to participate in a voting system related to IT sector salaries.
- * It involves functionality for retrieving, displaying, and filtering salary-related data based on user input.
- * The component uses React state management to handle dynamic changes and user interactions.
- *
- * @return {React.ReactElement} Returns the JSX structure of the Home component, which contains input fields,
- * voting rules, salary statistics, and user interactive functionality.
- */
 export default function Home() {
 
     const [voted, setVoted] = useState(false)
@@ -167,6 +158,18 @@ export default function Home() {
             if (checked) return [...prev, value]
             else return prev.filter((item) => item !== value)
         })
+    }
+
+    function toggleFilter(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        const target = e.target as HTMLDivElement
+        const target2 = target.nextElementSibling as HTMLDivElement
+        let  height = 0
+        if (!target2.classList.contains('active')) {
+            height = target2.scrollHeight
+        }
+        target2.classList.toggle('active')
+
+        target2.style.height =`${height}px`
     }
 
 
@@ -330,8 +333,8 @@ export default function Home() {
                             <div className="filters">
 
                                 <div className="filter">
-                                    <div className="filter-title">Szint</div>
-                                    <div className="filter-options">
+                                    <div className="filter-title" onClick={toggleFilter}>Szint</div>
+                                    <div className="filter-options" >
                                         <div className="filter-options-padding">
                                             {levels.map(level => (
                                                 <label key={level.level}>
@@ -347,7 +350,7 @@ export default function Home() {
                                 </div>
 
                                 <div className="filter">
-                                    <div className="filter-title">Pozíció</div>
+                                    <div className="filter-title" onClick={toggleFilter}>Pozíció</div>
                                     <div className="filter-options">
                                         <div className="filter-options-padding">
                                             {positions.map(position => (
