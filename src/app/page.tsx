@@ -189,7 +189,7 @@ export default function Home() {
             <section>
 
                 <div className="title">
-                    <div className="version">v0.15</div>
+                    <div className="version">v0.2</div>
                     <h1>Nézd meg mennyit keresnek mások az <span style={{color: '#154ee0'}}>IT szektorban</span></h1>
                 </div>
 
@@ -338,11 +338,14 @@ export default function Home() {
                                         <div className="filter-options-padding">
                                             {levels.map(level => (
                                                 <label key={level.level}>
-                                                    <div className="checkbox"></div>
-                                                    <input type="checkbox" value={level.level} className="filter-level"
-                                                           onChange={Levels}/>
-                                                    <span className="filter-name">{level.level}</span>
-                                                    <span className="filter-count">({level.count})</span>
+                                                    <div>
+                                                        <div className="checkbox"></div>
+                                                        <input type="checkbox" value={level.level} className="filter-level" onChange={Levels}/>
+                                                        <span className="filter-name">{level.level}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="filter-count">({level.count})</span>
+                                                    </div>
                                                 </label>
                                             ))}
                                         </div>
@@ -355,11 +358,14 @@ export default function Home() {
                                         <div className="filter-options-padding">
                                             {positions.map(position => (
                                                 <label key={position.position}>
-                                                    <div className="checkbox"></div>
-                                                    <input type="checkbox" value={position.position} className="filter-level"
-                                                           onChange={Positions}/>
-                                                    <span className="filter-name">{position.position}</span>
-                                                    <span className="filter-count">({position.count})</span>
+                                                    <div>
+                                                        <div className="checkbox"></div>
+                                                        <input type="checkbox" value={position.position} className="filter-level" onChange={Positions}/>
+                                                        <span className="filter-name">{position.position}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="filter-count">({position.count})</span>
+                                                    </div>
                                                 </label>
                                             ))}
                                         </div>
