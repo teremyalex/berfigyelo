@@ -16,6 +16,7 @@ export default function Home() {
     const [month, setMonth] = useState(9)
     const [level, setLevel] = useState("")
     const [position, setPosition] = useState("")
+    const [nonIT, setNonIT] = useState(false)
 
     //FILTERS
     const [positions, setPositions] = useState<Positions[]>([])
@@ -28,7 +29,7 @@ export default function Home() {
 
     // Ez csak kliens oldalon fut
     useEffect(() => {
-        const stored = localStorage.getItem("vote202508") === "true"
+        const stored = localStorage.getItem("vote202509") === "true"
         setVoted(stored)
     }, [])
 
@@ -54,57 +55,73 @@ export default function Home() {
         items: Item[];
     };
 
-    if (voted && salary) {
-        const votedName = localStorage.getItem('vote202508Name')
-        if (salary === "" && votedName) salary = votedName
-    }
-
 
     useEffect(() => {
-        if (!voted) return
+        if (!voted) return;
+        setRunFetch(true);
 
-        let interval: ReturnType<typeof setInterval>;
+        let interval: ReturnType<typeof setInterval>
+        let currentController: AbortController | null = null
 
         const getFetchData = async () => {
-            try {
-                const query = new URLSearchParams({
-                    ...(filterLevel.length ? {level: filterLevel.join(",")} : {}),
-                    ...(filterPosition.length ? {position: filterPosition.join(",")} : {})
-                })
+            // Abort previous fetch if still running
+            if (currentController) currentController.abort()
 
-                const response = await fetch(`https://berfigyelo.vercel.app/api/${year}/${month}?${query}`)
+            currentController = new AbortController();
+
+            const query = new URLSearchParams({
+                ...(filterLevel.length ? { level: filterLevel.join(",") } : {}),
+                ...(filterPosition.length ? { position: filterPosition.join(",") } : {})
+            });
+
+            try {
+                const response = await fetch(
+                    `https://berfigyelo.vercel.app/api/${year}/${month}?${query}`,
+                    { signal: currentController.signal }
+                );
+
                 if (response.ok) {
-                    const jsonData: ResponseData = await response.json()
-                    setData(jsonData.items)
-                    setVotes(jsonData.items.length)
-                    setLevels(jsonData.levels)
-                    setPositions(jsonData.positions)
+                    const jsonData: ResponseData = await response.json();
+                    setData(jsonData.items);
+                    setVotes(jsonData.items.length);
+                    setLevels(jsonData.levels);
+                    setPositions(jsonData.positions);
+                    setRunFetch(false);
                 } else {
-                    console.error("Hiba a szerverről:", response.status)
+                    console.error("Hiba a szerverről:", response.status);
                 }
             } catch (error) {
-                console.error('Hiba történt a küldés során:', error)
+                if (error instanceof Error && error.name !== "AbortError") {
+                    console.error("Hiba történt a küldés során:", error);
+                }
             }
         };
 
         getFetchData();
-
-        // 10 másodperces polling
         interval = setInterval(getFetchData, 10000);
 
-        return () => clearInterval(interval); // cleanup
+        return () => {
+            clearInterval(interval);
+            if (currentController) currentController.abort();
+        };
     }, [voted, year, month, filterLevel, filterPosition]);
 
 
     async function fetchData() {
         if (runFetch) return
-        if (salary === "" || level === "" || position === "") return alert("Adj meg minden adatot!")
+        if (salary === "") return alert("Adj meg minden adatot!")
+        if (!nonIT && level === "") return alert("Adj meg minden adatot!")
+        if (!nonIT && position === "") return alert("Adj meg minden adatot!")
         setRunFetch(true)
 
         // ReCAPTCHA
         const token = await reRef.current?.executeAsync()
         reRef.current?.reset()
 
+        if (nonIT){
+            setLevel("Nincs")
+            setPosition("Nincs")
+        }
 
         try {
             const response = await fetch('https://berfigyelo.vercel.app/api/create9', {
@@ -117,11 +134,10 @@ export default function Home() {
 
             if (response.ok) {
                 localStorage.setItem('vote202509', 'true')
-                localStorage.setItem('vote202509Name', `${salary}`)
-                console.log(response.ok)
+                //console.log(response.ok)
                 const jsonData: ResponseData = await response.json()
                 setData(jsonData.items)
-                console.log(data)
+                //console.log(data)
                 setVoted(true)
                 setLevels(jsonData.levels)
                 setPositions(jsonData.positions)
@@ -161,6 +177,7 @@ export default function Home() {
     }
 
     function toggleFilter(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+        if(runFetch) return
         const target = e.target as HTMLDivElement
         const target2 = target.nextElementSibling as HTMLDivElement
         let  height = 0
@@ -171,6 +188,19 @@ export default function Home() {
 
         target2.style.height =`${height}px`
     }
+
+    function SalarySelect(e: React.ChangeEvent<HTMLSelectElement>) {
+        setSalary(e.target.value)
+
+        const nonITValues = [
+            "Nem dolgozom az IT-ban",
+            "IT-s vagyok, de most nincs IT munkám",
+            "Külföldön élek, ezért nem szavazhatok",
+        ]
+
+        setNonIT(nonITValues.includes(e.target.value))
+    }
+
 
 
     return (
@@ -214,15 +244,11 @@ export default function Home() {
                 {voted === false ?
                     <div className="input">
                         <div className="select-icon">
-                            <select onChange={(e) => setSalary(e.target.value)}>
+                            <select onChange={SalarySelect}>
                                 <option value="">Bruttó fizetésed</option>
                                 <option value="Nem dolgozom az IT-ban">Nem dolgozom az IT-ban</option>
-                                <option value="IT-s vagyok, de most nincs IT munkám">IT-s vagyok, de most nincs IT
-                                    munkám
-                                </option>
-                                <option value="Külföldön élek, ezért nem szavazhatok">Külföldön élek, ezért nem
-                                    szavazhatok
-                                </option>
+                                <option value="IT-s vagyok, de most nincs IT munkám">IT-s vagyok, de most nincs IT munkám</option>
+                                <option value="Külföldön élek, ezért nem szavazhatok">Külföldön élek, ezért nem szavazhatok</option>
                                 {
                                     Array.from({length: 60}, (_, i) => i * 100000).map(i =>
                                         <option key={i + 1}
@@ -234,7 +260,7 @@ export default function Home() {
                             </select>
                         </div>
                         <div className="select-icon">
-                            <select onChange={(e) => setLevel(e.target.value)}>
+                            <select disabled={nonIT} onChange={(e) => setLevel(e.target.value)}>
                                 <option value="">Szinted</option>
                                 <option value="Intern">Intern</option>
                                 <option value="Junior">Junior</option>
@@ -242,12 +268,12 @@ export default function Home() {
                                 <option value="Senior">Senior</option>
                                 <option value="Lead">Lead</option>
                                 <option value="Staff">Staff</option>
-                                <option value="Architech">Architech</option>
+                                <option value="Architect">Architect</option>
                                 <option value="Principal">Principal</option>
                             </select>
                         </div>
                         <div className="select-icon">
-                            <select onChange={(e) => setPosition(e.target.value)}>
+                            <select disabled={nonIT} onChange={(e) => setPosition(e.target.value)}>
                                 <option value="">Pozíciód</option>
 
                                 <optgroup label="Fejlesztés & Szoftver">
@@ -295,6 +321,9 @@ export default function Home() {
                                 <optgroup label="Projekt & Vezetés">
                                     <option value="Project Manager">Project Manager</option>
                                     <option value="Scrum Master">Scrum Master</option>
+                                    <option value="Functional SAP Consultant">Functional SAP consultant</option>
+                                    <option value="Technical SAP Consultant">Technical SAP consultant</option>
+
                                 </optgroup>
                             </select>
                         </div>
@@ -317,16 +346,48 @@ export default function Home() {
 
                             <div className="month">
                                 <div className="select-icon">
-                                    <select onChange={(e) => setMonth(Number(e.target.value))}>
-                                        <option value="8">Augusztus</option>
+                                    <select value={month} onChange={(e) => setMonth(Number(e.target.value))}>
                                         <option value="9">Szeptember</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                         <div className="votes-details">
-                            <div className="allVotes">Szavazatok: {votes}</div>
-                            <div className="close">Szavazás vége: 2025.08.31.</div>
+                            <div className="live">LIVE</div>
+                            <div className="allVotes">{votes} szavazat</div>
+                            <div className="close">Szavazás vége: 09.30.</div>
+                        </div>
+
+                        <div className="stats">
+                            <div className="avarage">
+                                <span>Átlag: </span>
+                                {
+                                    new Intl.NumberFormat('de', {useGrouping: true}).format(
+                                Math.floor(data
+                                        .filter(item => item.salary.includes("0"))
+                                        .map(item => item.salary.split(" - ")[0]
+                                        .replaceAll(".", "")).reduce((a, b) => Number(a) + (Number(b) + 49999), 0) / data.length)
+                                    ) + " Ft"
+                                }
+                            </div>
+                            <div className="median">
+                                <span>Medián: </span>
+                                {
+                                    (() => {
+                                        const salaries = data
+                                            .filter(item => item.salary.includes("0"))
+                                            .map(item => Number(item.salary.split(" - ")[0].split(",")[0].replaceAll(".", "")) + 49999)
+                                            .sort((a, b) => a - b);
+
+                                        const middle = Math.floor(salaries.length / 2);
+                                        const median = salaries.length % 2 === 0
+                                            ? Math.floor((salaries[middle - 1] + salaries[middle]) / 2)
+                                            : salaries[middle];
+
+                                        return new Intl.NumberFormat('de', {useGrouping: true}).format(median) + " Ft";
+                                    })()
+                                }
+                            </div>
                         </div>
 
                         <div className="votes">
@@ -337,14 +398,14 @@ export default function Home() {
                                     <div className="filter-options" >
                                         <div className="filter-options-padding">
                                             {levels.map(level => (
-                                                <label key={level.level}>
+                                                <label key={level.level} className={level.count === 0 ? "disabled" : ""}>
                                                     <div>
-                                                        <div className="checkbox"></div>
+                                                        <div className="checkbox" onClick={()=>setRunFetch(true)}></div>
                                                         <input type="checkbox" value={level.level} className="filter-level" onChange={Levels}/>
                                                         <span className="filter-name">{level.level}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="filter-count">({level.count})</span>
+                                                        <span className="filter-count">{runFetch ? <img className="runFetch" src="getfetchloading.svg"/> : level.count === 0 ? "" : level.count}</span>
                                                     </div>
                                                 </label>
                                             ))}
@@ -357,14 +418,14 @@ export default function Home() {
                                     <div className="filter-options">
                                         <div className="filter-options-padding">
                                             {positions.map(position => (
-                                                <label key={position.position}>
+                                                <label key={position.position} className={position.count === 0 ? "disabled" : ""}>
                                                     <div>
-                                                        <div className="checkbox"></div>
+                                                        <div className="checkbox" onClick={()=>setRunFetch(true)}></div>
                                                         <input type="checkbox" value={position.position} className="filter-level" onChange={Positions}/>
                                                         <span className="filter-name">{position.position}</span>
                                                     </div>
                                                     <div>
-                                                        <span className="filter-count">({position.count})</span>
+                                                        <span className="filter-count">{runFetch ? <img className="runFetch" src="getfetchloading.svg"/> : position.count === 0 ? "" : position.count}</span>
                                                     </div>
                                                 </label>
                                             ))}
@@ -384,7 +445,7 @@ export default function Home() {
                                         return (
                                             <li key={i + 1}>
                                                 <div className="bar"
-                                                     style={{width: `${(600 > window.innerWidth ? 300 : 600) * (count / votes)}px`}}>
+                                                     style={{width: `${(600 > window.innerWidth ? 300 : 390) * (count / votes) * (votes > 30 ? 5 : 2)}px`}}>
                                                     <span className="voteNumber">{count}</span>
                                                     <span className="voteName">{rangeLabel}</span>
                                                 </div>
